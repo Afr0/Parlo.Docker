@@ -1,2 +1,0 @@
-C:\Users\matsv\OneDrive\Documents\Github\Parlo.Docker\LoginProtocok\obj\Debug\LoginProtocok.csproj.AssemblyReference.cache
-C:\Users\matsv\OneDrive\Documents\Github\Parlo.Docker\LoginProtocok\obj\Debug\LoginProtocok.csproj.CoreCompileInputs.cache
