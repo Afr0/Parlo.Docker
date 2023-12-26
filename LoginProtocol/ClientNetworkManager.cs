@@ -13,8 +13,10 @@ Contributor(s):
 using System;
 using System.Threading.Tasks;
 using Parlo;
+using Parlo.Encryption;
 using Parlo.Packets;
 using SecureRemotePassword;
+using System.Diagnostics;
 using ZeroFormatter;
 
 namespace LoginProtocol
@@ -25,13 +27,17 @@ namespace LoginProtocol
     {
         private static Lazy<ClientNetworkManager> m_Instance = new Lazy<ClientNetworkManager>(() => new ClientNetworkManager());
         private static NetworkClient m_Client = default!;
+        private static EncryptionArgs m_EncryptionArgs = new EncryptionArgs();
 
         private static SrpClient m_SRPClient = new SrpClient();
         private static SrpEphemeral m_ClientEphemeral = default!;
+        private static SrpSession m_Session = default!;
 
         private static Task m_NetworkingTask = default!;
 
         private static bool m_HasBeenAuthenticated = false;
+
+        private static LoginArgsContainer m_LoginArgs = default!;
 
         /// <summary>
         /// Has the client been authenticated?
@@ -74,20 +80,25 @@ namespace LoginProtocol
             m_Client.OnNetworkError += Client_OnNetworkError;
             m_Client.OnReceivedData += Client_OnReceivedData;
 
-            LoginArgsContainer LoginArgs = new LoginArgsContainer();
-            LoginArgs.Address = IP;
-            LoginArgs.Port = Port;
-            LoginArgs.Client = m_Client;
-            LoginArgs.Username = Username;
-            LoginArgs.Password = Password;
+            m_LoginArgs = new LoginArgsContainer();
+            m_LoginArgs.Address = IP;
+            m_LoginArgs.Port = Port;
+            m_LoginArgs.Client = m_Client;
+            m_LoginArgs.Username = Username;
+            m_LoginArgs.Password = Password;
 
             if (PacketHandlers.Get((byte)AuthPacketIDs.ServerInitialAuthResponse) == null)
             {
                 PacketHandlers.Register((byte)AuthPacketIDs.ServerInitialAuthResponse, false,
                     new OnPacketReceived(Client_OnReceivedData));
             }
+            if (PacketHandlers.Get((byte)AuthPacketIDs.SAuthProof) == null)
+            {
+                PacketHandlers.Register((byte)AuthPacketIDs.SAuthProof, false,
+                    new OnPacketReceived(Client_OnReceivedData));
+            }
 
-            m_NetworkingTask = Task.Run(async () => { await m_Client.ConnectAsync(LoginArgs); });
+            m_NetworkingTask = Task.Run(async () => { await m_Client.ConnectAsync(m_LoginArgs); });
         }
 
         /// <summary>
@@ -120,16 +131,12 @@ namespace LoginProtocol
         {
             await OnConnected?.Invoke(LoginArgs);
 
-            ClientInitialAuth InitialAuth = new ClientInitialAuth();
-            InitialAuth.Username = LoginArgs.Username;
-
-            string Salt = m_SRPClient.GenerateSalt();
-            string PrivateKey = m_SRPClient.DerivePrivateKey(Salt, LoginArgs.Username, LoginArgs.Password);
-            string Verifier = m_SRPClient.DeriveVerifier(PrivateKey);
-
             m_ClientEphemeral = m_SRPClient.GenerateEphemeral();
-            InitialAuth.Ephemeral = m_ClientEphemeral.Public;
+            ClientInitialAuth InitialAuth = new ClientInitialAuth(LoginArgs.Username, m_ClientEphemeral.Public);
+
             byte[] Data = ZeroFormatterSerializer.Serialize(InitialAuth);
+            Packet PacketToSend = new Packet((byte)AuthPacketIDs.ClientInitialAuth, Data, false);
+            await m_Client.SendAsync(PacketToSend.BuildPacket());
         }
 
         /// <summary>
@@ -147,16 +154,61 @@ namespace LoginProtocol
         /// <param name="Packet">The packet that the client received.</param>
         private async Task Client_OnReceivedData(NetworkClient Sender, Packet P)
         {
+            byte[] PacketData;
+
             switch (P.ID)
             {
                 case (byte)AuthPacketIDs.ServerInitialAuthResponse:
                     ServerInitialAuthResponse InitialAuthResponsePacket =
                         ZeroFormatterSerializer.Deserialize<ServerInitialAuthResponse>(P.Data);
+                    string Salt = InitialAuthResponsePacket.Salt.TrimEnd('\0');
+                    string PrivateKey = m_SRPClient.DerivePrivateKey(Salt, m_LoginArgs.Username, m_LoginArgs.Password);
+
+                    try
+                    {
+                        m_Session = m_SRPClient.DeriveSession(m_ClientEphemeral.Secret,
+                            InitialAuthResponsePacket.PublicEphemeral, Salt, m_LoginArgs.Username, PrivateKey);
+
+                        m_EncryptionArgs = new EncryptionArgs()
+                        {
+                            Mode = EncryptionMode.AES,
+                            Salt = Salt,
+                            Key = m_Session.Key
+                        };
+                    }
+                    catch (Exception E)
+                    {
+                        Debug.WriteLine("Client couldn't derive session: \r\n" + E.ToString());
+                        OnNetworkError((System.Net.Sockets.SocketException)E);
+                    }
+
+                    AuthProof CProofPacket = new AuthProof(m_Session.Proof);
+
+                    PacketData = ZeroFormatterSerializer.Serialize(CProofPacket);
+                    Packet PacketToSend = new Packet((byte)AuthPacketIDs.CAuthProof, PacketData, false);
+                    await Sender.SendAsync(PacketToSend.BuildPacket());
+
+                    ///What's wrong here???
                     await OnPacketReceived?.Invoke(InitialAuthResponsePacket, P.ID, Sender);
                     break;
                 case (byte)AuthPacketIDs.SAuthProof:
                     m_HasBeenAuthenticated = true;
-                    AuthProof AuthProofPacket = ZeroFormatterSerializer.Deserialize<AuthProof>(P.Data);
+                    EncryptedPacket EncPacket = EncryptedPacket.FromPacket(m_EncryptionArgs, P);
+                    AuthProof AuthProofPacket = ZeroFormatterSerializer.Deserialize<AuthProof>(EncPacket.DecryptPacket());
+
+                    string SessionProof = AuthProofPacket.SessionProof.TrimEnd('\0');
+
+                    try
+                    {
+                        m_SRPClient.VerifySession(m_ClientEphemeral.Public,
+                            m_Session, AuthProofPacket.SessionProof);
+                    }
+                    catch (Exception E)
+                    {
+                        Debug.WriteLine("Client couldn't derive session: \r\n" + E.ToString());
+                        OnNetworkError((System.Net.Sockets.SocketException)E);
+                    }
+
                     await OnPacketReceived?.Invoke(AuthProofPacket, P.ID, Sender);
                     break;
             }
