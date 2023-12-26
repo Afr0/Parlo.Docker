@@ -34,8 +34,6 @@ namespace Parlo.Docker
         private static SemaphoreSlim m_InputSemaphore;
         private static bool m_Input = true;
 
-        private static SemaphoreSlim m_ProgressbarSemaphore;
-        private static ConsoleProgressbar m_Progressbar;
         private static int m_NumClients = 0;
 
         private static int m_NumLogicalProcessors = Environment.ProcessorCount;
@@ -121,9 +119,6 @@ namespace Parlo.Docker
                 m_NumberOfCores : m_NumLogicalProcessors,
                 (m_NumberOfCores > m_NumLogicalProcessors) ? m_NumberOfCores : m_NumLogicalProcessors);
             m_InputSemaphore = new SemaphoreSlim((m_NumberOfCores > m_NumLogicalProcessors) ?
-                m_NumberOfCores : m_NumLogicalProcessors,
-                (m_NumberOfCores > m_NumLogicalProcessors) ? m_NumberOfCores : m_NumLogicalProcessors);
-            m_ProgressbarSemaphore = new SemaphoreSlim((m_NumberOfCores > m_NumLogicalProcessors) ?
                 m_NumberOfCores : m_NumLogicalProcessors,
                 (m_NumberOfCores > m_NumLogicalProcessors) ? m_NumberOfCores : m_NumLogicalProcessors);
 
@@ -216,7 +211,7 @@ namespace Parlo.Docker
                         PublicEphemeral = InitialAuthPacket.Ephemeral.TrimEnd('\0'),
                         Username = U.Username
                     }))
-                        Debug.WriteLine("ClientInitialAuth: Server couldn't add key because it already existed!");
+                    Debug.WriteLine("ClientInitialAuth: Server couldn't add key because it already existed!");
 
                     ServerInitialAuthResponse ServerInitResponse = new ServerInitialAuthResponse(U.Salt, Ephemeral.Public);
 
@@ -247,7 +242,7 @@ namespace Parlo.Docker
                             ExistingUser.Salt, ExistingUser.Username, ExistingUser.Verifier, Proof);
 
                         m_AuthenticatedClients.Add(Sender);
-                        Debug.WriteLine("Authenticated session: " + m_AuthenticatedClients.Count);
+                        Console.WriteLine("Authenticated session: " + m_AuthenticatedClients.Count);
 
                         m_SClientData[Sender].EncryptionArgs = new EncryptionArgs()
                         {
@@ -255,12 +250,6 @@ namespace Parlo.Docker
                             Salt = ExistingUser.Salt,
                             Key = Session.Key
                         };
-
-                        // Update the progress bar with the current number of authenticated clients
-                        await m_ProgressbarSemaphore.WaitAsync();
-                            double Progress = (double)m_AuthenticatedClients.Count / m_NumClients;
-                            m_Progressbar.Report(Progress);
-                        m_ProgressbarSemaphore.Release();
 
                         AuthProof SProofPacket = new AuthProof(Session.Proof);
 
@@ -271,7 +260,7 @@ namespace Parlo.Docker
                     }
                     catch (Exception E)
                     {
-                        Debug.WriteLine("Server couldn't authenticate session: \r\n" + E.ToString());
+                        Console.WriteLine("Server couldn't authenticate session: \r\n" + E.ToString());
                     }
 
                     break;
