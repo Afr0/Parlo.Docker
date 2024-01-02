@@ -31,5 +31,8 @@ COPY --from=build /app/publish .
 # Set environment variables if any are needed for your app to run
 # ENV ConnectionStrings__DefaultConnection="YourConnectionString"
 
+# Expose port 568
+EXPOSE 568
+
 # Specify the entry point of your app
 ENTRYPOINT ["dotnet", "Parlo.Docker.dll"]
