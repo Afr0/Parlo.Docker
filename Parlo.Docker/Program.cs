@@ -145,6 +145,7 @@ namespace Parlo.Docker
             Logger.OnMessageLogged += Logger_OnMessageLogged;
 
             _ = ServerNetworkManager.Instance.Listen("127.0.0.1", 568);
+            Console.WriteLine("Using port: " + m_Port);
             string Cmd = "";
 
             while (true)
@@ -194,9 +195,11 @@ namespace Parlo.Docker
                 //Tests the logger - messages flagged as info are "Client connected" and "Client disconnected!"
                 case LogLevel.info:
                     Debug.WriteLine(Msg.Message);
+                    Console.WriteLine(Msg.Message);
                     break;
                 case LogLevel.error:
                     Debug.WriteLine(Msg.Message);
+                    Console.WriteLine(Msg.Message);
                     break;
             }
         }
@@ -211,6 +214,7 @@ namespace Parlo.Docker
             switch (AuthID)
             {
                 case AuthPacketIDs.ClientInitialAuth:
+                    Console.WriteLine("ClientInitialAuth: Received packet from client!");
 
                     ClientInitialAuth InitialAuthPacket = (ClientInitialAuth)P;
                     User U;
@@ -227,7 +231,7 @@ namespace Parlo.Docker
                         PublicEphemeral = InitialAuthPacket.Ephemeral.TrimEnd('\0'),
                         Username = U.Username
                     }))
-                    Debug.WriteLine("ClientInitialAuth: Server couldn't add key because it already existed!");
+                    Console.WriteLine("ClientInitialAuth: Server couldn't add key because it already existed!");
 
                     ServerInitialAuthResponse ServerInitResponse = new ServerInitialAuthResponse(U.Salt, Ephemeral.Public);
 
@@ -291,7 +295,7 @@ namespace Parlo.Docker
         /// <param name="Exception">The exception that occured.</param>
         private static void ServerNetworkManager_OnNetworkError(System.Net.Sockets.SocketException Exception)
         {
-            Debug.WriteLine("Network error: " + Exception.ToString());
+            Console.WriteLine("Network error: " + Exception.ToString());
         }
 
         #endregion
