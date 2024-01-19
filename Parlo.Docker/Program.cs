@@ -53,15 +53,19 @@ namespace Parlo.Docker
         {
             //Make sure the DB is fresh on startup, so that a new account is created every
             //the program starts. This should obviously not be done in a production scenario.
-            if (File.Exists("Users.db"))
-                File.Delete("Users.db");
+            if (File.Exists("/Users.db"))
+                File.Delete("/Users.db");
 
-            Database.CreateTables();
-            //12C00000 = 300megs
-            //10 minutes should be (more than?) enough - if a user logs in once, and has typed the
-            //wrong password or username, it shouldn't take him 10 minutes to try again, UNLESS he
-            //genuinely forgot it and needs to reset it, in which case it should take max 10 mins.
-            m_UserCache = new UserCache("Users.cache", 0x12C00000, TimeSpan.FromMinutes(10));
+            try
+            {
+                Database.CreateTables();
+                //12C00000 = 300megs
+                //10 minutes should be (more than?) enough - if a user logs in once, and has typed the
+                //wrong password or username, it shouldn't take him 10 minutes to try again, UNLESS he
+                //genuinely forgot it and needs to reset it, in which case it should take max 10 mins.
+                m_UserCache = new UserCache("/Users.cache", 0x12C00000, TimeSpan.FromMinutes(10));
+            }
+            catch (Exception ex) { Console.WriteLine(ex.Message); }
 
             Task SRPServerTask = StartSRPServer();
 
