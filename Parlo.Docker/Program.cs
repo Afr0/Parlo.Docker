@@ -161,7 +161,6 @@ namespace Parlo.Docker
             while (true)
             {
                 {
-                    string[] Args = Cmd.Split(" ");
                     /*if (m_Input)
                         Cmd = Console.ReadLine();
 
