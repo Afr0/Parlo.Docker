@@ -46,7 +46,7 @@ namespace LoginProtocol.Database
                 SQLiteConnection Connection = m_Connections[m_Index];
                 m_Index++;
 
-                if (Connection.State != System.Data.ConnectionState.Open)
+                if (Connection.State != ConnectionState.Open)
                     Connection.Open();
 
                 return Connection;
@@ -80,7 +80,7 @@ namespace LoginProtocol.Database
                         m_Connections[i].Dispose();
                 }
 
-                // Prevent the finalizer from calling ~SQLiteConnectionPool, since the object is already disposed at this point.
+                //Prevent the finalizer from calling ~SQLiteConnectionPool, since the object is already disposed at this point.
                 GC.SuppressFinalize(this);
             }
             else
@@ -94,7 +94,7 @@ namespace LoginProtocol.Database
 
         static Database()
         {
-            m_ConnectionPool = new SQLiteConnectionPool(/*"Data source=:memory:"*/"Data source=Users.db");
+            m_ConnectionPool = new SQLiteConnectionPool(/*"Data source=:memory:"*/"Data source=/Users.db");
         }
 
         /// <summary>

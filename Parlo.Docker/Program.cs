@@ -49,6 +49,8 @@ namespace Parlo.Docker
         private static int m_NumLogicalProcessors = Environment.ProcessorCount;
         private static int m_NumberOfCores = 0;
 
+        private static int m_Port = 3077;
+
         static async Task Main(string[] args)
         {
             //Make sure the DB is fresh on startup, so that a new account is created every
@@ -67,7 +69,7 @@ namespace Parlo.Docker
             }
             catch (Exception ex) { Console.WriteLine(ex.Message); }
 
-            Task SRPServerTask = StartSRPServer();
+            Task SRPServerTask = Task.Run(() => StartSRPServer());
 
             WebApplicationBuilder Builder = WebApplication.CreateBuilder(args);
             Builder.Services.AddControllers();
@@ -115,7 +117,14 @@ namespace Parlo.Docker
                 }
             });
 
-            await Task.WhenAll(SRPServerTask, WebApp.RunAsync());
+            AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(UnhandledExceptionTrapper);
+
+            await Task.WhenAll(SRPServerTask, Task.Run(() => WebApp.RunAsync()));
+        }
+
+        static void UnhandledExceptionTrapper(object sender, UnhandledExceptionEventArgs e)
+        {
+            Console.WriteLine("Unhandled exception:" + e.ExceptionObject.ToString());
         }
 
         /// <summary>
@@ -134,7 +143,6 @@ namespace Parlo.Docker
                 (m_NumberOfCores > m_NumLogicalProcessors) ? m_NumberOfCores : m_NumLogicalProcessors);
             m_InputSemaphore = new SemaphoreSlim((m_NumberOfCores > m_NumLogicalProcessors) ?
                 m_NumberOfCores : m_NumLogicalProcessors,
-                (m_NumberOfCores > m_NumLogicalProcessors) ? m_NumberOfCores : m_NumLogicalProcessors);
 
             await m_UserCacheSemaphore.WaitAsync();
             //Add the user to the DB, this would normally be done when a client creates a new account.
@@ -148,7 +156,7 @@ namespace Parlo.Docker
             //Subscribe to messages from GonzoNet so we can see if clients disconnected.
             Logger.OnMessageLogged += Logger_OnMessageLogged;
 
-            _ = ServerNetworkManager.Instance.Listen("127.0.0.1", 568);
+            _ = ServerNetworkManager.Instance.Listen("0.0.0.0", m_Port);
             Console.WriteLine("Using port: " + m_Port);
             string Cmd = "";
 

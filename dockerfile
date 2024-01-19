@@ -19,8 +19,8 @@ WORKDIR /app
 # Copy the published app from the build stage
 COPY --from=build-env /app/out .
 
-# Expose port 568
-EXPOSE 568
+# Expose port 3077
+EXPOSE 3077
 
 # Specify the entry point of your app
 ENTRYPOINT ["dotnet", "Parlo.Docker.dll"]

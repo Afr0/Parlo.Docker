@@ -46,7 +46,7 @@ namespace LoginProtocol.Database
 
             m_CacheItemSlidingExpiration = SlidingExpiration;
 
-            // Load cached users from file (if exists)
+            //Load cached users from file (if exists)
             LoadCacheFromFile();
         }
 
@@ -64,33 +64,31 @@ namespace LoginProtocol.Database
             if (Username == string.Empty)
                 throw new ArgumentException("Username cannot be empty!");
 
-            // Try to get user from cache
+            //Try to get user from cache
             User? user = m_Cache.Get(Username) as User;
             if (user != null)
                 return user;
 
-            // User not found in cache, try to get from database
-            DataTable result = Database.SelectFrom("Users", "Username", Username);
+            //User not found in cache, try to get from database
+            DataTable Result = Database.SelectFrom("Users", "Username", Username);
 
-            if (result.Rows.Count > 0)
+            if (Result.Rows.Count > 0)
             {
-                DataRow row = result.Rows[0];
+                DataRow Row = Result.Rows[0];
                 User U = new User
                 {
-                    Username = (string)row["Username"],
-                    Salt = (string)row["Salt"],
-                    Verifier = (string)row["Verifier"]
+                    Username = (string)Row["Username"],
+                    Salt = (string)Row["Salt"],
+                    Verifier = (string)Row["Verifier"]
                 };
 
                 m_Cache[Username] = U;
 
-                // Save cache to file
                 SaveCacheToFile();
 
                 return U;
             }
 
-            // Return null when the user is not found
             return null;
         }
 
@@ -131,7 +129,6 @@ namespace LoginProtocol.Database
 
             m_Cache.Add(User.Username, User, Policy);
 
-            // Save cache to file
             SaveCacheToFile();
         }
 
@@ -150,7 +147,6 @@ namespace LoginProtocol.Database
 
             m_Cache.Remove(Username);
 
-            // Save cache to file
             SaveCacheToFile();
         }
 
@@ -187,18 +183,18 @@ namespace LoginProtocol.Database
         {
             if (File.Exists(m_CacheFilePath))
             {
-                using (var reader = new BinaryReader(File.Open(m_CacheFilePath, FileMode.Open, FileAccess.ReadWrite,
+                using (BinaryReader Reader = new BinaryReader(File.Open(m_CacheFilePath, FileMode.Open, FileAccess.ReadWrite,
                     FileShare.ReadWrite)))
                 {
-                    int count = reader.ReadInt32();
+                    int Count = Reader.ReadInt32();
 
-                    for (int i = 0; i < count; i++)
+                    for (int i = 0; i < Count; i++)
                     {
                         var user = new User
                         {
-                            Username = reader.ReadString(),
-                            Salt = reader.ReadString(),
-                            Verifier = reader.ReadString()
+                            Username = Reader.ReadString(),
+                            Salt = Reader.ReadString(),
+                            Verifier = Reader.ReadString()
                         };
 
                         m_Cache.Set(user.Username, user, new CacheItemPolicy { SlidingExpiration = m_CacheItemSlidingExpiration });
