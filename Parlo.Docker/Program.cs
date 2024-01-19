@@ -141,8 +141,6 @@ namespace Parlo.Docker
             m_UserCacheSemaphore = new SemaphoreSlim((m_NumberOfCores > m_NumLogicalProcessors) ?
                 m_NumberOfCores : m_NumLogicalProcessors,
                 (m_NumberOfCores > m_NumLogicalProcessors) ? m_NumberOfCores : m_NumLogicalProcessors);
-            m_InputSemaphore = new SemaphoreSlim((m_NumberOfCores > m_NumLogicalProcessors) ?
-                m_NumberOfCores : m_NumLogicalProcessors,
 
             await m_UserCacheSemaphore.WaitAsync();
             //Add the user to the DB, this would normally be done when a client creates a new account.
@@ -162,10 +160,6 @@ namespace Parlo.Docker
 
             while (true)
             {
-                if (m_Input)
-                    Cmd = Console.ReadLine();
-
-                if (Cmd != null)
                 {
                     string[] Args = Cmd.Split(" ");
                     /*if (m_Input)
@@ -294,6 +288,7 @@ namespace Parlo.Docker
                     {
                         Console.WriteLine("Server couldn't authenticate session: \r\n" + E.ToString());
                     }
+
 
                     break;
             }
