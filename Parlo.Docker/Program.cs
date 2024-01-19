@@ -42,8 +42,7 @@ namespace Parlo.Docker
 
         private const string m_USERNAME = "Mats", m_PASSWORD = "Test";
 
-        private static SemaphoreSlim m_InputSemaphore;
-        private static bool m_Input = true;
+        private static bool m_Input = false;
 
         private static int m_NumClients = 0;
 
@@ -156,29 +155,35 @@ namespace Parlo.Docker
                 if (Cmd != null)
                 {
                     string[] Args = Cmd.Split(" ");
+                    /*if (m_Input)
+                        Cmd = Console.ReadLine();
 
-                    switch (Args[0].ToUpper())
+                    if (Cmd != null)
                     {
-                        case "E": //Exit
-                            if (Args.Length < 2)
+                        string[] Args = Cmd.Split(" ");
+
+                        switch (Args[0].ToUpper())
+                        {
+                            case "E": //Exit
+                                if (Args.Length < 2)
+                                    break;
+
+                                Environment.Exit(0);
+
                                 break;
-
-                            Environment.Exit(0);
-
-                            break;
-                        default:
-                            if (Cmd != "")
-                            {
-                                Console.WriteLine("Commands: E to exit.");
-                                Cmd = "";
-                            }
-                            break;
+                            default:
+                                if (Cmd != "")
+                                {
+                                    Console.WriteLine("Commands: E to exit.");
+                                    Cmd = "";
+                                }
+                                break;
+                        }
                     }
-                }
 
-                Cmd = "";
+                    Cmd = "";*/
 
-                await Task.Yield();
+                    await Task.Yield();
             }
         }
 
