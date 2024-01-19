@@ -4,4 +4,6 @@
 
 To build: cd into directory, then <b>docker build -t parlo .</b>
 
-To run: cd into directory, then <b>docker run -p 8080:80 -p 568:568 parlo</b>
+To run: cd into directory, then <b>docker run -d -p 3077:3077 -p 8080:80 parlo</b>
+
+<i>This will spawn a website on localhost:8080 in your browser where you can register a new user.</i>
